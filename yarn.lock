@@ -121,6 +121,10 @@ cron-parser@^2.4.0:
     is-nan "^1.2.1"
     moment-timezone "^0.5.0"
 
+cuid@^2.1.4:
+  version "2.1.4"
+  resolved "https://registry.npmjs.org/cuid/-/cuid-2.1.4.tgz#e1178eb92a05ef9364b29a9942feed36d3604cdd"
+
 dashdash@^1.12.0:
   version "1.14.1"
   resolved "https://registry.npmjs.org/dashdash/-/dashdash-1.14.1.tgz#853cfa0f7cbe2fed5de20326b8dd581035f6e2f0"
@@ -254,6 +258,10 @@ fast-deep-equal@^1.0.0:
 fast-json-stable-stringify@^2.0.0:
   version "2.0.0"
   resolved "https://registry.npmjs.org/fast-json-stable-stringify/-/fast-json-stable-stringify-2.0.0.tgz#d5142c0caee6b1189f87d3a76111064f86c8bbf2"
+
+fecha@^2.3.3:
+  version "2.3.3"
+  resolved "https://registry.npmjs.org/fecha/-/fecha-2.3.3.tgz#948e74157df1a32fd1b12c3a3c3cdcb6ec9d96cd"
 
 finalhandler@1.1.1:
   version "1.1.1"

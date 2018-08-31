@@ -4,5 +4,6 @@ module.exports = {
     },
     page: [
 
-    ]
+    ],
+    logs: []
 }

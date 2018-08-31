@@ -13,7 +13,7 @@ const request = require('request')
 const cookieParser = require('cookie-parser')
 const delayEach = require('delayeach')
 const extend = require('safe-extend')
-
+const fecha = require('fecha')
 db.defaults(require('./defaultDataBase'))
   .write()
 app.use(urlencodedParser)
@@ -115,6 +115,20 @@ app.post('/remove', function (req, res, next) {
     ).write()
     res.send({type: 'pass'})
 })
+app.get('/database', function (req, res) {
+    if (req.session.login) {
+        res.type('.text')
+        res.send(JSON.stringify({
+            type: 'pass',
+            data: db.value()
+        }, null, 4))
+    }
+    else {
+        res.send({
+            type:'fail'
+        })
+    }
+})
 app.post('/login', function (req, res, next) {
     let password = db.get('admin.password').value()
     if (password !== req.body.password) {
@@ -147,7 +161,23 @@ function task () {
                 function emitNext () {
                     next()
                 }
+                var id = require('cuid')()
+                if (db.get('logs').value().length > 1000) {
+                    db.set('logs', []).write()
+                }
+                db.get('logs').push({
+                    id: id,
+                    url: item.url,
+                    type: 'request start',
+                    time: fecha.format(new Date(), 'YYYY-MM-DD hh:mm:ss')
+                }).write()
                 request.get(item.url, function (err, res, body) {
+                    db.get('logs').push({
+                        id: id,
+                        url: item.url,
+                        type: 'request end',
+                        time: fecha.format(new Date(), 'YYYY-MM-DD hh:mm:ss')
+                    }).write()
                     let data = extend.clone(db.get('page').find({url: item.url}).value())
                     data.checkDate = checkDate
                     if (err || typeof res === 'undefined') {
@@ -166,6 +196,13 @@ function task () {
                                 emitNext()
                                 return
                             }
+                            var sendId = require('cuid')()
+                            db.get('logs').push({
+                                id: sendId,
+                                url: item.url,
+                                type: 'send sms start',
+                                time: fecha.format(new Date(), 'YYYY-MM-DD hh:mm:ss')
+                            }).write()
                             request({
                                 method: 'POST',
                                 url: 'http://www.emailcar.net/v2/sms_send',
@@ -177,6 +214,14 @@ function task () {
                                     content: '监控报警:'+ item.url + ' 无法访问，服务器状态码:' + data.status
                                 }
                             }, function (err, res, body) {
+                                var sendId = require('cuid')()
+                                db.get('logs').push({
+                                    id: sendId,
+                                    url: item.url,
+                                    type: 'send sms end',
+                                    body: body,
+                                    time: fecha.format(new Date(), 'YYYY-MM-DD hh:mm:ss')
+                                }).write()
                                 var resData = JSON.parse(body)
                                 if (err) {
                                     console.log('send sms api error: ' + err)
@@ -207,7 +252,7 @@ function task () {
                 })
             },
             function () {
-                setTimeout(task, 1000)
+                setTimeout(task, 5000)
             }
         )
 }
