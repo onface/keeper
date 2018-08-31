@@ -3,7 +3,7 @@ const app = express()
 const path =require('path')
 const low = require('lowdb')
 const FileSync = require('lowdb/adapters/FileSync')
-const adapter = new FileSync('db.json')
+const adapter = new FileSync('data/db.json')
 const db = low(adapter)
 const bodyParser = require('body-parser')
 const urlencodedParser = bodyParser.urlencoded({ extended: false })
@@ -88,7 +88,7 @@ app.get('/list', checkLogin, function (req, res, next) {
     return
 })
 app.post('/add', checkLogin, function (req, res, next) {
-        var matchUrl = /^(?:(?:ht|f)tp(?:s?)\:\/\/|~\/|\/)?(?:\w+:\w+@)?((?:(?:[-\w\d{1-3}]+\.)+(?:com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|edu|co\.uk|ac\.uk|it|fr|tv|museum|asia|local|travel|[a-z]{2}))|((\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)(\.(\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)){3}))(?::[\d]{1,5})?(?:(?:(?:\/(?:[-\w~!$+|.,=]|%[a-f\d]{2})+)+|\/)+|\?|#)?(?:(?:\?(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)(?:&(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)*)*(?:#(?:[-\w~!$ |\/.,*:;=]|%[a-f\d]{2})*)?$/i
+        var matchUrl = new RegExp("((^http)|(^https)|(^ftp)):\/\/(\\w)+\.(\\w)+")
         if (!matchUrl.test(req.body.url)) {
             res.send({
                 type: 'fail',
@@ -154,6 +154,12 @@ require('events').EventEmitter.prototype._maxListeners = 100;
 
 
 function task () {
+        if (db.get('page').value().length === 0 ) {
+            setTimeout(function() {
+                task()
+            }, 1000)
+            return
+        }
         delayEach(
             db.get('page').value(),
             function (item, index, next, finish) {
@@ -227,10 +233,10 @@ function task () {
                                     console.log('send sms api error: ' + err)
                                 }
                                 if (resData.status === 'error') {
-                                    data.msg = '短信接口错误： ' + resData.msg + new Date().toString()
+                                    data.msg = '短信接口错误： ' + resData.msg + fecha.format(new Date(), 'YYYY-MM-DD hh:mm:ss')
                                 }
                                 else {
-                                    data.msg = '短信提醒已发送' + new Date().toString()
+                                    data.msg = '短信提醒已发送' + fecha.format(new Date(), 'YYYY-MM-DD hh:mm:ss')
                                     data.sendSmsCount++
                                 }
                                 db.get('page').find({url: item.url}).assign(data).write()
