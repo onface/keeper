@@ -213,8 +213,8 @@ function task () {
                                 method: 'POST',
                                 url: 'http://www.emailcar.net/v2/sms_send',
                                 formData: {
-                                    api_user: '',
-                                    api_pwd: '',
+                                    api_user: process.env.SMS_API_USER || '',
+                                    api_pwd: process.env.SMS_API_PWD || '',
                                     mobiles: item.mobiles,
                                     sign: 'EmailCar',
                                     content: '监控报警:'+ item.url + ' 无法访问，服务器状态码:' + data.status
