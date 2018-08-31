@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>keeper</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui@2.4.6/lib/theme-chalk/index.css">
+    <script src="https://unpkg.com/vue@2.5.17/dist/vue.js"></script>
+    <script src="https://unpkg.com/element-ui@2.4.6/lib/index.js"></script>
+    <script src="https://unpkg.com/jquery@1.12.0/dist/jquery.min.js"></script>
+    <script src="https://unpkg.com/fecha@2.3.3/fecha.js"></script>
+</head>
+<body>
+    <div id="app">
+        <el-table
+              :loading="listBusy"
+              :data="tableData"
+              style="width: 100%"
+              :row-class-name="tableRowClassName"
+        >
+              <el-table-column
+                prop="status"
+                label="状态"
+                >
+                <template slot-scope="scope">
+                    <div v-if='scope.row.status <= 400' style="color:#67c23a;" >
+                        <i class="el-icon-success" ></i>
+                        {{scope.row.status}}
+                    </div>
+                    <div v-else style="color:#F56C6E;" >
+                        <i class="el-icon-error"></i>
+                        {{scope.row.status}}
+                    </div>
+               </template>
+              </el-table-column>
+              <el-table-column
+                prop="url"
+                label="地址"
+                >
+                <template slot-scope="scope">
+                    <a :href="scope.row.url">{{scope.row.url}}</a>
+               </template>
+              </el-table-column>
+              <el-table-column
+                prop="checkDate"
+                label="检查时间">
+                <template slot-scope="scope">
+                    {{date(scope.row.checkDate)}}
+               </template>
+              </el-table-column>
+              <el-table-column
+                prop="msg"
+                label="消息">
+              </el-table-column>
+              <el-table-column
+                prop="mobiles"
+                label="通知手机">
+              </el-table-column>
+              <el-table-column
+                prop="action"
+                label="操作">
+                <template slot-scope="scope">
+                    <el-button type="danger" @click="remove(scope.row.url)" >删除</el-button>
+               </template>
+              </el-table-column>
+            </el-table>
+
+            <el-form v-if="loginShow" ref="login" :model="form" label-width="80px">
+                <h2>登录</h2>
+                <el-form-item label="密码">
+                 <el-input v-model="login.password"></el-input>
+               </el-form-item>
+               <el-form-item>
+                <el-button type="primary" :loading="loginBusy" @click="loginOnSubmit">登录</el-button>
+              </el-form-item>
+            </el-form>
+            <el-form v-else ref="form" :model="form" label-width="120px">
+                <h2>添加监控地址</h2>
+                <el-form-item label="网址">
+                 <el-input v-model="form.url"></el-input>
+               </el-form-item>
+               <el-form-item label="接收报警手机">
+                <el-input v-model="form.mobiles" placeholder="多个手机号码以 , 分割" ></el-input>
+              </el-form-item>
+               <el-form-item>
+                <el-button type="primary" :loading="busy" @click="onSubmit">添加</el-button>
+              </el-form-item>
+            </el-form>
+    </div>
+<style>
+.el-table .error-row {
+    background-color: rgb(245, 108, 110, .2);
+}
+.el-table .success-row {
+
+}
+a {
+    color: #09f;
+}
+</style>
+<script>
+    new Vue({
+      el: '#app',
+      created: function () {
+          var self = this
+          setTimeout(function callee () {
+              if (!self.loginShow) {
+                  self.getList(function () {
+                    setTimeout(callee, 1000)
+                  })
+              }
+              else {
+                setTimeout(callee, 1000)
+              }
+          }, 0)
+      },
+      methods: {
+        remove: function (url) {
+            const self = this
+            $.ajax({
+                type: 'post',
+                url: '/remove',
+                data: {
+                    url: url
+                }
+            }).done(function (res) {
+                if (res.type === 'pass') {
+                    self.tableData = self.tableData.filter(function (item) {
+                        return url !== item.url
+                    })
+                }
+                else {
+                    self.$message(res.msg)
+                }
+            }).fail(function () {
+                self.$message('网络错误请刷新重试')
+            }).always(function (){
+
+            })
+        },
+        date: function (date) {
+            if (!date) {
+                return ''
+            }
+          return fecha.format(new Date(date), 'YYYY-MM-DD hh:mm:ss')
+        },
+        getList: function (callback) {
+            var self = this
+            if (self.listBusy) {
+                return
+            }
+            self.listBusy = true
+            $.ajax({
+                type: 'get',
+                url: '/list'
+            }).done(function (res) {
+                if (res.type === 'pass') {
+                    self.tableData = res.data
+                }
+                else if (res.type === 'needLogin') {
+                    self.$message('登录信息超时，请重新登录')
+                    self.loginShow = true
+                }
+                else {
+                    self.$message(res.msg)
+                }
+            }).fail(function () {
+                self.$message('网络错误请刷新重试')
+            }).always(function (){
+                self.listBusy = false
+                if (typeof callback === 'function') {
+                    callback()
+                }
+            })
+        },
+        tableRowClassName: function (data, rowIndex) {
+            if (data.row.status <=400) {
+                return 'success-row'
+            }
+            else {
+                return 'error-row'
+            }
+        },
+        loginOnSubmit: function () {
+            const self = this
+            if (self.loginBusy) {
+                return
+            }
+            self.loginBusy = true
+            $.ajax({
+                url: '/login',
+                type: 'post',
+                data: self.login
+            }).done(function (res) {
+                if (res.type === 'pass') {
+                    self.loginShow = false
+                    self.getList()
+                }
+                else {
+                    self.$message(res.msg)
+                }
+            }).fail(function () {
+                self.$message('网络错误请刷新重试')
+            }).always(function (){
+                self.loginBusy = false
+            })
+        },
+        onSubmit: function () {
+            const self = this
+            if (!self.form.url.trim()) {
+                self.$message('网址要写不啦')
+                return
+            }
+            if (self.busy) {
+                return
+            }
+            self.busy = true
+            $.ajax({
+                url: '/add',
+                type: 'post',
+                data: self.form
+            }).done(function (res) {
+                if (res.type === 'pass') {
+                    self.$message('添加成功')
+                }
+                else if (res.type === 'needLogin') {
+                    self.$message('请先登录')
+                    self.loginShow = true
+                }
+                else {
+                    self.$message(res.msg)
+                }
+            }).fail(function () {
+                self.$message('网络错误请刷新重试')
+            }).always(function (){
+                self.busy = false
+            })
+        }
+      },
+      data: function() {
+        return {
+            listBusy: false,
+            loginShow: false,
+            loginBusy: false,
+            busy: false,
+            login: {
+                password: ''
+            },
+            form: {
+                url: '',
+                mobiles: ''
+            },
+            tableData: [
+
+            ]
+        }
+      }
+    })
+</script>
+</body>
+</html>

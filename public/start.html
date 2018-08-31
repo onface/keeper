@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>keeper</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui@2.4.6/lib/theme-chalk/index.css">
+    <script src="https://unpkg.com/vue@2.5.17/dist/vue.js"></script>
+    <script src="https://unpkg.com/element-ui@2.4.6/lib/index.js"></script>
+    <script src="https://unpkg.com/jquery@1.12.0/dist/jquery.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <h1>系统初始化设置</h1>
+        <el-form ref="form" :model="form" label-width="80px">
+            <el-form-item label="登录密码">
+             <el-input v-model="form.password"></el-input>
+           </el-form-item>
+           <el-form-item>
+            <el-button type="primary" :loading="busy" @click="onSubmit">下一步</el-button>
+          </el-form-item>
+        </el-form>
+    </div>
+<script>
+    new Vue({
+      el: '#app',
+      methods: {
+        onSubmit: function (){
+            var self = this
+            if (!self.form.password.trim()) {
+                alert('请输入登录密码')
+                return
+            }
+            if (self.busy) {
+                return
+            }
+            self.busy = true
+            $.ajax({
+                url: '/setPassword',
+                type: 'post',
+                data: self.form
+            }).done(function (res) {
+                if (res.type === 'pass') {
+                    location.href = '/'
+                }
+                else {
+                    alert(res.msg)
+                }
+            }).fail(function () {
+                alert('网络错误请刷新重试')
+            }).always(function (){
+                self.busy = false
+            })
+        }
+      },
+      data: function() {
+        return {
+            busy: false,
+            form: {
+                password: ''
+            }
+        }
+      }
+    })
+</script>
+</body>
+</html>
