@@ -153,6 +153,9 @@ app.listen(port, function () {
 require('events').EventEmitter.prototype._maxListeners = 100;
 
 
+function getNowDateFormat () {
+    return fecha.format(new Date(), 'YYYY-MM-DD HH:mm:ss')
+}
 function task () {
         if (db.get('page').value().length === 0 ) {
             setTimeout(function() {
@@ -160,11 +163,31 @@ function task () {
             }, 1000)
             return
         }
+        var calledNewTask = false
+        function emitNewTask () {
+            if (calledNewTask) {
+                return
+            }
+            calledNewTask = true
+            setTimeout(task, 5000)
+        }
+        setTimeout(function () {
+            if (calledNewTask === false) {
+                console.log('强制进入下一个任务')
+                console.log(JSON.stringify(db.get('logs').value()))
+                emitNewTask()
+            }
+        }, 1000*60*20)
         delayEach(
             db.get('page').value(),
             function (item, index, next, finish) {
-                var checkDate = new Date().getTime()
+                var checkDate = getNowDateFormat()
+                var calledNext = false
                 function emitNext () {
+                    if (calledNext) {
+                        return
+                    }
+                    calledNext = true
                     next()
                 }
                 var id = require('cuid')()
@@ -175,20 +198,20 @@ function task () {
                     id: id,
                     url: item.url,
                     type: 'request start',
-                    time: fecha.format(new Date(), 'YYYY-MM-DD hh:mm:ss')
+                    time: getNowDateFormat()
                 }).write()
                 request.get(item.url, function (err, res, body) {
                     db.get('logs').push({
                         id: id,
                         url: item.url,
                         type: 'request end',
-                        time: fecha.format(new Date(), 'YYYY-MM-DD hh:mm:ss')
+                        time: getNowDateFormat()
                     }).write()
                     let data = extend.clone(db.get('page').find({url: item.url}).value())
                     data.checkDate = checkDate
                     if (err || typeof res === 'undefined') {
                         data.status = 404
-                        data.msg = err.code
+                        data.msg = JSON.stringify(err)
                     }
                     else {
                         data.status = res.statusCode
@@ -207,7 +230,7 @@ function task () {
                                 id: sendId,
                                 url: item.url,
                                 type: 'send sms start',
-                                time: fecha.format(new Date(), 'YYYY-MM-DD hh:mm:ss')
+                                time: getNowDateFormat()
                             }).write()
                             request({
                                 method: 'POST',
@@ -226,17 +249,27 @@ function task () {
                                     url: item.url,
                                     type: 'send sms end',
                                     body: body,
-                                    time: fecha.format(new Date(), 'YYYY-MM-DD hh:mm:ss')
+                                    time: getNowDateFormat()
                                 }).write()
-                                var resData = JSON.parse(body)
+                                var resData = {}
+                                try{
+                                    resData = JSON.parse(body)
+                                }
+                                catch (e) {
+                                    resData= {
+                                        status: 'error',
+                                        msg: '短信接口json格式错误' + e.message + ' json  ' + body
+                                    }
+                                }
                                 if (err) {
                                     console.log('send sms api error: ' + err)
+                                    res.resData.msg = JSON.stringify(err)
                                 }
                                 if (resData.status === 'error') {
-                                    data.msg = '短信接口错误： ' + resData.msg + fecha.format(new Date(), 'YYYY-MM-DD hh:mm:ss')
+                                    data.msg = '短信接口错误： ' + resData.msg + getNowDateFormat()
                                 }
                                 else {
-                                    data.msg = '短信提醒已发送' + fecha.format(new Date(), 'YYYY-MM-DD hh:mm:ss')
+                                    data.msg = '短信提醒已发送' + getNowDateFormat()
                                     data.sendSmsCount++
                                 }
                                 db.get('page').find({url: item.url}).assign(data).write()
@@ -256,9 +289,16 @@ function task () {
                         emitNext()
                     }
                 })
+                setTimeout(function () {
+                    if (calledNext === false) {
+                        console.log('强制进入下一个请求')
+                        console.log(JSON.stringify(db.get('logs').value()))
+                        emitNext()
+                    }
+                }, 10000)
             },
             function () {
-                setTimeout(task, 5000)
+                emitNewTask()
             }
         )
 }

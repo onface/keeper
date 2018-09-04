@@ -46,9 +46,6 @@
               <el-table-column
                 prop="checkDate"
                 label="检查时间">
-                <template slot-scope="scope">
-                    {{date(scope.row.checkDate)}}
-               </template>
               </el-table-column>
               <el-table-column
                 prop="msg"
@@ -139,12 +136,6 @@ a {
             }).always(function (){
 
             })
-        },
-        date: function (date) {
-            if (!date) {
-                return ''
-            }
-          return fecha.format(new Date(date), 'YYYY-MM-DD hh:mm:ss')
         },
         getList: function (callback) {
             var self = this
